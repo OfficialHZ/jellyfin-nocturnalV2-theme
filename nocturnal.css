@@ -1,0 +1,705 @@
+/* ==========================================================================
+   Nocturnal — a dark, moonlit theme for Jellyfin Web 10.10 / 10.11
+   https://github.com/OfficialHZ/jellyfin-nocturnalV2-theme
+   CSS only. Load via Dashboard → General → Custom CSS code.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+
+/* ==========================================================================
+   Tokens
+   Every colour, radius and font in this file comes from here.
+   Override any of these in your own Custom CSS *after* the @import.
+   ========================================================================== */
+:root {
+  /* Palette */
+  --nc-bg: #0B0D14;          /* page background */
+  --nc-header: #0E1119;      /* header, side drawer, phone bottom bar */
+  --nc-surface: #121628;     /* cards, panels, dialogs */
+  --nc-surface-2: #151927;   /* inputs, secondary buttons */
+  --nc-border: #1F2540;      /* borders */
+  --nc-border-soft: #1C2133; /* header/drawer divider */
+  --nc-text: #E8EAF2;        /* main text */
+  --nc-text-2: #C3C8D6;      /* nav links, body copy */
+  --nc-muted: #9AA1B5;       /* secondary text */
+  --nc-accent: #8B9CFF;      /* periwinkle; alternatives #7FD1C7 #F2B872 #E58FB0 */
+  --nc-on-accent: #0B0D14;   /* text on accent */
+
+  /* Allowed one-offs (from CLAUDE.md), kept as tokens so nothing is hard-coded below */
+  --nc-chip-border: #39405A;
+  --nc-scroll-thumb: #2A3048;
+  --nc-backdrop-overlay: rgba(11, 13, 20, 0.86);
+  --nc-progress-track: rgba(11, 13, 20, 0.6);
+  --nc-hairline: rgba(255, 255, 255, 0.06);
+
+  /* Radii */
+  --nc-radius: 14px;         /* posters, cards */
+  --nc-radius-sm: 10px;      /* tabs, menu items */
+  --nc-radius-btn: 12px;     /* buttons, inputs */
+  --nc-radius-lg: 18px;      /* dialogs, menus, action sheets */
+  --nc-radius-chip: 6px;     /* rating / quality chips */
+
+  /* Type */
+  --nc-font-body: "Inter", system-ui, sans-serif;
+  --nc-font-display: "Space Grotesk", "Inter", sans-serif;
+
+  /* Sizing */
+  --nc-touch: 44px;          /* minimum touch target */
+  --nc-progress-h: 5px;
+}
+
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+html,
+body,
+.backgroundContainer {
+  background-color: var(--nc-bg);
+}
+
+body,
+.emby-button,
+.emby-input,
+.emby-select,
+.emby-textarea {
+  font-family: var(--nc-font-body);
+}
+
+body {
+  color: var(--nc-text);
+}
+
+h1, h2, h3,
+.pageTitle,
+.itemName {
+  font-family: var(--nc-font-display);
+  color: var(--nc-text);
+}
+
+a {
+  color: var(--nc-accent);
+}
+
+::selection {
+  background: var(--nc-accent);
+  color: var(--nc-on-accent);
+}
+
+/* Visible focus everywhere (keyboard / remote) */
+:focus-visible {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+/* Section titles — Space Grotesk 600, ~22px */
+.sectionTitle,
+.sectionTitle-cards {
+  font-family: var(--nc-font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--nc-text);
+}
+
+/* Backdrops — darker overlay so text stays readable */
+.backgroundContainer.withBackdrop {
+  background-color: var(--nc-backdrop-overlay);
+}
+
+
+/* ==========================================================================
+   Header & tabs
+   ========================================================================== */
+.skinHeader,
+.skinHeader-withBackground {
+  background-color: var(--nc-header);
+  border-bottom: 1px solid var(--nc-border-soft);
+  box-shadow: none;
+  color: var(--nc-text);
+}
+
+.pageTitle {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.headerButton {
+  color: var(--nc-text-2);
+  border-radius: var(--nc-radius-btn);
+}
+
+.headerButton:hover {
+  color: var(--nc-text);
+  background-color: var(--nc-surface-2);
+}
+
+/* Avatar with accent ring, as in the mockup */
+.headerUserButtonRound { /* UNVERIFIED */
+  border: 2px solid var(--nc-accent);
+  border-radius: 50%;
+}
+
+/* Top tabs → rounded pills */
+.headerTabs .emby-tab-button {
+  font-family: var(--nc-font-body);
+  font-weight: 500;
+  color: var(--nc-text-2);
+  border-radius: var(--nc-radius-sm);
+  padding: 0.55em 1.1em;
+  margin: 0 0.15em;
+  border-bottom: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.headerTabs .emby-tab-button:hover {
+  color: var(--nc-text);
+  background-color: var(--nc-surface-2);
+}
+
+.headerTabs .emby-tab-button.emby-tab-button-active,
+.headerTabs .emby-tab-button-active {
+  background-color: var(--nc-accent);
+  color: var(--nc-on-accent);
+  font-weight: 600;
+}
+
+/* Hide Jellyfin's underline indicator under the active tab — the pill replaces it */
+.emby-tabs-slider .emby-tab-button::after, /* UNVERIFIED */
+.emby-tab-button-ripple-effect { /* UNVERIFIED */
+  display: none;
+}
+
+
+/* ==========================================================================
+   Drawer
+   ========================================================================== */
+.mainDrawer {
+  background-color: var(--nc-header);
+  border-right: 1px solid var(--nc-border-soft);
+  color: var(--nc-text-2);
+}
+
+.mainDrawer .sidebarHeader { /* UNVERIFIED */
+  color: var(--nc-muted);
+  font-family: var(--nc-font-body);
+  font-weight: 600;
+}
+
+.navMenuOption {
+  color: var(--nc-text-2);
+  border-radius: var(--nc-radius-sm);
+  margin: 2px 8px;
+  min-height: var(--nc-touch);
+  box-sizing: border-box;
+}
+
+.navMenuOption:hover {
+  background-color: var(--nc-surface-2);
+  color: var(--nc-text);
+}
+
+.navMenuOption-selected,
+.navMenuOption-selected:hover {
+  background-color: var(--nc-accent);
+  color: var(--nc-on-accent);
+  font-weight: 600;
+}
+
+.navMenuOption-selected .navMenuOptionIcon {
+  color: var(--nc-on-accent);
+}
+
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+.cardBox,
+.cardScalable,
+.cardImageContainer,
+.cardOverlayContainer {
+  border-radius: var(--nc-radius);
+}
+
+.cardScalable {
+  overflow: hidden;
+}
+
+.cardImageContainer {
+  background-color: var(--nc-surface);
+  box-shadow: inset 0 0 0 1px var(--nc-hairline);
+}
+
+/* Placeholder backgrounds when an item has no artwork */
+.defaultCardBackground,
+.defaultCardBackground1,
+.defaultCardBackground2,
+.defaultCardBackground3,
+.defaultCardBackground4,
+.defaultCardBackground5 {
+  background-color: var(--nc-surface);
+  color: var(--nc-muted);
+}
+
+/* Hairline + accent outline on hover / keyboard focus */
+.cardBox {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.15s ease;
+}
+
+.cardScalable {
+  border: 1px solid var(--nc-hairline);
+}
+
+.card:hover .cardScalable,
+.card:focus-visible .cardScalable,
+.card:focus-within .cardScalable {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+/* Drop Jellyfin's own focus "lift" border so only our outline shows */
+.card:focus .cardBox.visualCardBox,
+.card:focus .cardBox:not(.visualCardBox) .cardScalable {
+  border-color: transparent;
+}
+
+/* Card text: title in Space Grotesk, meta in muted Inter */
+.cardText {
+  color: var(--nc-text);
+}
+
+.cardText-first {
+  font-family: var(--nc-font-display);
+  font-weight: 600;
+}
+
+.cardText-secondary {
+  color: var(--nc-muted);
+  font-family: var(--nc-font-body);
+}
+
+.visualCardBox {
+  background-color: var(--nc-surface);
+  border: 1px solid var(--nc-border);
+}
+
+/* Horizontal scroller arrows */
+.emby-scrollbuttons-button { /* UNVERIFIED */
+  background-color: var(--nc-surface-2);
+  color: var(--nc-text);
+  border-radius: 50%;
+}
+
+
+/* ==========================================================================
+   Progress & badges
+   ========================================================================== */
+.itemProgressBar {
+  height: var(--nc-progress-h);
+  background-color: var(--nc-progress-track);
+  border-radius: 0;
+}
+
+.itemProgressBarForeground {
+  background-color: var(--nc-accent);
+}
+
+.playedIndicator,
+.countIndicator {
+  background-color: var(--nc-accent);
+  color: var(--nc-on-accent);
+  font-family: var(--nc-font-body);
+  font-weight: 600;
+}
+
+.playedIndicator .material-icons,
+.countIndicator .material-icons {
+  color: var(--nc-on-accent);
+}
+
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+/* Secondary (default raised button) */
+.emby-button.raised,
+.raised {
+  background-color: var(--nc-surface-2);
+  color: var(--nc-text);
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-btn);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+.emby-button.raised:hover,
+.raised:hover {
+  border-color: var(--nc-chip-border);
+}
+
+/* Primary — Play / Resume / Save */
+.button-submit,
+.emby-button.button-submit,
+.raised.button-submit {
+  background-color: var(--nc-accent);
+  color: var(--nc-on-accent);
+  border: 1px solid var(--nc-accent);
+  border-radius: var(--nc-radius-btn);
+  font-weight: 600;
+}
+
+.button-submit:hover,
+.emby-button.button-submit:hover {
+  background-color: var(--nc-accent);
+  filter: brightness(1.08);
+}
+
+.emby-button:focus-visible,
+.paper-icon-button-light:focus-visible {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+.button-flat {
+  color: var(--nc-text-2);
+  border-radius: var(--nc-radius-btn);
+}
+
+.button-flat:hover {
+  color: var(--nc-text);
+  background-color: var(--nc-surface-2);
+}
+
+.button-link {
+  color: var(--nc-accent);
+}
+
+
+/* ==========================================================================
+   Inputs
+   ========================================================================== */
+.emby-input,
+.emby-select,
+.emby-textarea,
+.emby-select-withcolor {
+  background-color: var(--nc-surface-2);
+  color: var(--nc-text);
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-btn);
+  font-family: var(--nc-font-body);
+}
+
+.emby-input:focus,
+.emby-select:focus,
+.emby-textarea:focus,
+.emby-select-withcolor:focus {
+  border-color: var(--nc-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--nc-accent);
+}
+
+.emby-input::placeholder,
+.emby-textarea::placeholder {
+  color: var(--nc-muted);
+}
+
+.inputLabel,
+.selectLabel,
+.textareaLabel,
+.fieldDescription {
+  color: var(--nc-muted);
+}
+
+.inputLabelFocused,
+.selectLabelFocused,
+.textareaLabelFocused {
+  color: var(--nc-accent);
+}
+
+.emby-select option {
+  background-color: var(--nc-surface);
+  color: var(--nc-text);
+}
+
+/* Checkboxes */
+.emby-checkbox:checked + span + .checkboxOutline {
+  background-color: var(--nc-accent);
+  border-color: var(--nc-accent);
+}
+
+.emby-checkbox:checked + span + .checkboxOutline > .checkboxIcon-checked {
+  color: var(--nc-on-accent);
+}
+
+.emby-checkbox:focus-visible + span + .checkboxOutline {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--nc-accent);
+}
+
+
+/* ==========================================================================
+   Detail page
+   ========================================================================== */
+.itemDetailPage .itemName,
+.detailPagePrimaryContainer .itemName { /* UNVERIFIED */
+  font-family: var(--nc-font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.itemMiscInfo,
+.itemMiscInfo-primary {
+  color: var(--nc-text-2);
+}
+
+.overview,
+.itemOverview { /* UNVERIFIED (.itemOverview) */
+  color: var(--nc-text-2);
+  line-height: 1.55;
+}
+
+/* Rating / quality chips ("4K HDR", "TV-14") */
+.mediaInfoOfficialRating,
+.mediaInfoItem.mediaInfoText { /* UNVERIFIED (.mediaInfoText) */
+  border: 1px solid var(--nc-chip-border);
+  border-radius: var(--nc-radius-chip);
+  padding: 0.1em 0.45em;
+  color: var(--nc-text);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+/* Detail buttons (play, resume, watched, favourite…) */
+.mainDetailButtons .detailButton { /* UNVERIFIED */
+  background-color: var(--nc-surface-2);
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-btn);
+  color: var(--nc-text);
+  min-width: var(--nc-touch);
+  min-height: var(--nc-touch);
+}
+
+.mainDetailButtons .detailButton.btnPlay,
+.mainDetailButtons .detailButton.btnResume { /* UNVERIFIED */
+  background-color: var(--nc-accent);
+  border-color: var(--nc-accent);
+  color: var(--nc-on-accent);
+  font-weight: 600;
+}
+
+/* Episode rows */
+.listItem {
+  border-radius: var(--nc-radius);
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.listItem:hover,
+.listItem:focus-visible {
+  background-color: var(--nc-surface);
+  border-color: var(--nc-border);
+}
+
+.listItemImage {
+  border-radius: var(--nc-radius-sm);
+  overflow: hidden;
+}
+
+.listItemBodyText-secondary,
+.secondary.listItemBodyText { /* UNVERIFIED */
+  color: var(--nc-muted);
+}
+
+/* Cast & crew → round portraits, as in the mockup */
+#castContent .cardScalable,
+#castContent .cardImageContainer { /* UNVERIFIED */
+  border-radius: 50%;
+}
+
+
+/* ==========================================================================
+   Dialogs
+   ========================================================================== */
+.dialog,
+.formDialog,
+.actionSheet {
+  background-color: var(--nc-surface);
+  color: var(--nc-text);
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-lg);
+}
+
+/* Full-screen dialogs (e.g. on phones) shouldn't get rounded corners */
+.dialog-fullscreen { /* UNVERIFIED */
+  border-radius: 0;
+  border: 0;
+}
+
+.formDialogHeader,
+.formDialogFooter {
+  background-color: var(--nc-surface);
+  border-color: var(--nc-border);
+}
+
+.actionSheetMenuItem {
+  border-radius: var(--nc-radius-sm);
+  min-height: var(--nc-touch);
+}
+
+.actionSheetMenuItem:hover,
+.actionSheetMenuItem:focus-visible {
+  background-color: var(--nc-surface-2);
+}
+
+.dialogBackdropOpened { /* UNVERIFIED */
+  background-color: var(--nc-backdrop-overlay);
+}
+
+
+/* ==========================================================================
+   Scrollbars
+   ========================================================================== */
+* {
+  scrollbar-color: var(--nc-scroll-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--nc-scroll-thumb);
+  border-radius: 8px;
+}
+
+
+/* ==========================================================================
+   Tablet (600–1024px)
+   ========================================================================== */
+@media (min-width: 600px) and (max-width: 1024px) {
+  /* Tabs sit on their own row under the logo row */
+  .headerTabs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .headerTabs .emby-tab-button,
+  .headerButton,
+  .emby-button,
+  .navMenuOption {
+    min-height: var(--nc-touch);
+  }
+
+  .headerButton {
+    min-width: var(--nc-touch);
+  }
+
+  /* Row card sizes from the tablet mockup */
+  .emby-scroller .overflowPortraitCard {
+    width: 148px;
+  }
+
+  .emby-scroller .overflowBackdropCard {
+    width: 300px;
+  }
+
+  /* Library A–Z jump bar (Jellyfin has one natively) */
+  .alphaPickerButton { /* UNVERIFIED */
+    color: var(--nc-muted);
+    font-weight: 600;
+    min-width: var(--nc-touch);
+  }
+
+  .alphaPickerButton-selected { /* UNVERIFIED */
+    color: var(--nc-accent);
+    background: transparent;
+  }
+}
+
+
+/* ==========================================================================
+   Phone (< 600px)
+   ========================================================================== */
+@media (max-width: 599px) {
+  /* Compact header */
+  .skinHeader .pageTitle {
+    font-size: 1.15em;
+  }
+
+  .headerTabs .emby-tab-button {
+    padding: 0.5em 0.9em;
+    min-height: var(--nc-touch);
+  }
+
+  .headerButton {
+    min-width: var(--nc-touch);
+    min-height: var(--nc-touch);
+  }
+
+  .sectionTitle,
+  .sectionTitle-cards {
+    font-size: 20px;
+  }
+
+  /* Row card sizes from the phone mockup */
+  .emby-scroller .overflowPortraitCard {
+    width: 112px;
+  }
+
+  .emby-scroller .overflowBackdropCard {
+    width: 236px;
+  }
+
+  /* Detail page: poster beside the title */
+  .layout-mobile .detailPagePrimaryContainer { /* UNVERIFIED */
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+  }
+
+  /* Detail page: full-width primary button */
+  .mainDetailButtons { /* UNVERIFIED */
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mainDetailButtons .detailButton.btnPlay,
+  .mainDetailButtons .detailButton.btnResume { /* UNVERIFIED */
+    flex: 1 1 100%;
+    min-height: 52px;
+  }
+
+  /* Episode rows: small thumbnail + title + status */
+  .listItem-largeImage .listItemImage { /* UNVERIFIED */
+    width: 112px;
+    height: 63px;
+    flex-shrink: 0;
+  }
+
+  .listItem-largeImage .listItem-overview { /* UNVERIFIED */
+    display: none;
+  }
+
+  .listItem {
+    min-height: var(--nc-touch);
+  }
+}
