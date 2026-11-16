@@ -6,8 +6,8 @@ Inter body text. CSS only — no plugins, no JavaScript.
 
 ## What it styles
 
-- **Home:** solid header with pill tabs, accent avatar ring, rounded posters that zoom
-  inside their frame on hover, accent progress bars and badges
+- **Home:** solid header with pill tabs, accent avatar ring, rounded posters with an
+  accent ring on hover, accent progress bars and badges
 - **Side menu:** rounded items, accent highlight, user section pinned to the bottom
 - **Libraries:** toolbar as chips, quiet A–Z jump bar, filter options as toggle chips
 - **Movie & show pages:** backdrop band with the poster beside the title, "▶ Play"
