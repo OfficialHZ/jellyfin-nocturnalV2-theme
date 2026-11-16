@@ -2,6 +2,18 @@
    Nocturnal — a dark, moonlit theme for Jellyfin Web 10.10 / 10.11
    https://github.com/OfficialHZ/jellyfin-nocturnalV2-theme
    CSS only. Load via Dashboard → General → Custom CSS code.
+
+   Notes for maintainers
+   - No :has() and no backdrop-filter: the Jellyfin Media Player desktop app's
+     engine ignores :has(), and draws blurred layers as solid squares.
+   - !important is used only on properties Jellyfin's own theme also sets.
+   - Selectors marked UNVERIFIED have not been confirmed on a live server.
+
+   CONTENTS
+   Fonts · Tokens · Base · Login · Header & tabs · Drawer · Cards · Library ·
+   Progress & badges · Buttons · Inputs · Search · Detail page · Player ·
+   Dialogs · Settings & dashboard · Plugins · Scrollbars · Motion · TV ·
+   Tablet · Phone
    ========================================================================== */
 
 
@@ -14,7 +26,7 @@
 /* ==========================================================================
    Tokens
    Every colour, radius and font in this file comes from here.
-   Override any of these in your own Custom CSS *after* the @import.
+   Override any of these in your own Custom CSS, *below* the @import line.
    ========================================================================== */
 :root {
   /* Palette */
@@ -29,6 +41,7 @@
   --nc-muted: #9AA1B5;       /* secondary text */
   --nc-accent: #8B9CFF;      /* periwinkle; alternatives #7FD1C7 #F2B872 #E58FB0 */
   --nc-on-accent: #0B0D14;   /* text on accent */
+  --nc-danger: #F28B8B;      /* Sign out / Delete hover (7.9:1 on --nc-surface) */
 
   /* Allowed one-offs (from CLAUDE.md), kept as tokens so nothing is hard-coded below */
   --nc-chip-border: #39405A;
@@ -43,14 +56,29 @@
   --nc-radius-btn: 12px;     /* buttons, inputs */
   --nc-radius-lg: 18px;      /* dialogs, menus, action sheets */
   --nc-radius-chip: 6px;     /* rating / quality chips */
+  --nc-radius-pill: 999px;   /* filter chips, search field */
 
   /* Type */
   --nc-font-body: "Inter", system-ui, sans-serif;
   --nc-font-display: "Space Grotesk", "Inter", sans-serif;
 
+  /* Effects */
+  --nc-shadow: 0 18px 40px var(--nc-backdrop-overlay);
+  --nc-ease: 0.15s ease;
+
   /* Sizing */
   --nc-touch: 44px;          /* minimum touch target */
   --nc-progress-h: 5px;
+
+  /* Detail page */
+  --nc-hero-height: 62vh;                         /* backdrop height */
+  --nc-hero-offset: 34vh;                         /* where the title block starts */
+  --nc-poster-width: clamp(160px, 15vw, 260px);   /* poster beside the title */
+  --nc-page-gutter: 4vw;
+  --nc-play-label: "Play";                        /* text on the Play button; "" = icon only */
+
+  /* Login */
+  --nc-login-bg: none;       /* e.g. url("/Branding/Splashscreen") for your splash image */
 }
 
 
@@ -60,7 +88,15 @@
 html,
 body,
 .backgroundContainer {
-  background-color: var(--nc-bg);
+  background-color: var(--nc-bg) !important;
+}
+
+/* During playback Jellyfin makes the page transparent so the video (drawn
+   behind it in the desktop app) shows through. Step aside, or you get audio only. */
+html.transparentDocument,
+html.transparentDocument body,
+html.transparentDocument .backgroundContainer {
+  background: transparent !important;
 }
 
 body,
@@ -68,7 +104,7 @@ body,
 .emby-input,
 .emby-select,
 .emby-textarea {
-  font-family: var(--nc-font-body);
+  font-family: var(--nc-font-body) !important;
 }
 
 body {
@@ -101,15 +137,169 @@ a {
 .sectionTitle,
 .sectionTitle-cards {
   font-family: var(--nc-font-display);
-  font-weight: 600;
-  font-size: 22px;
+  font-weight: 600 !important;
+  font-size: 22px !important;
   letter-spacing: -0.01em;
-  color: var(--nc-text);
+  color: var(--nc-text) !important;
+}
+
+/* "Next Up ›" style links: accent chevron that nudges on hover */
+.sectionTitleTextButton {
+  display: inline-flex !important;
+  align-items: center;
+  color: var(--nc-text) !important;
+}
+
+.sectionTitleTextButton .chevron_right {
+  color: var(--nc-accent);
+  transition: transform var(--nc-ease);
+}
+
+.sectionTitleTextButton:hover .chevron_right,
+.sectionTitleTextButton:focus-visible .chevron_right {
+  transform: translateX(4px);
 }
 
 /* Backdrops — darker overlay so text stays readable */
 .backgroundContainer.withBackdrop {
-  background-color: var(--nc-backdrop-overlay);
+  background-color: var(--nc-backdrop-overlay) !important;
+}
+
+
+/* ==========================================================================
+   Login
+   Login, Select server, Add server, Forgot password. Content stays in
+   Jellyfin's own words (works in every language); it just gets a card.
+   ========================================================================== */
+#loginPage,
+#selectServerPage,
+.standalonePage:not(.wizardPage) {
+  background:
+    var(--nc-login-bg) center / cover no-repeat,
+    var(--nc-bg) !important;
+}
+
+/* Darken a splash image so the card reads */
+#loginPage::before,
+#selectServerPage::before,
+.standalonePage:not(.wizardPage)::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--nc-backdrop-overlay);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#loginPage > *,
+#selectServerPage > *,
+.standalonePage:not(.wizardPage) > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* The card */
+#loginPage > div,
+#selectServerPage > div,
+.standalonePage:not(.wizardPage) > div {
+  background-color: var(--nc-surface) !important;
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-lg);
+  box-shadow: var(--nc-shadow);
+  width: calc(100% - 32px);
+  max-width: 440px;
+  margin: 8vh auto !important;
+  padding: 40px 32px 32px !important;
+  box-sizing: border-box;
+}
+
+#loginPage .manualLoginForm {
+  background: transparent !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Moon mark above the heading (mask, so it follows --nc-accent) */
+#loginPage h1::before,
+#selectServerPage h1::before,
+.addServerForm h1::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  background-color: var(--nc-accent);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z'/></svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z'/></svg>") center / contain no-repeat;
+}
+
+#loginPage h1,
+#selectServerPage h1,
+.addServerForm h1 {
+  font-family: var(--nc-font-display);
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+#loginPage .button-submit,
+.addServerForm .button-submit {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+}
+
+/* Quick Connect / Forgot password / Change server: quiet text buttons */
+#loginPage .btnQuick,
+#loginPage .btnForgotPassword,
+#loginPage .btnSelectServer,
+.addServerForm .btnCancel,
+.addServerForm .button-cancel {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--nc-muted) !important;
+  box-shadow: none !important;
+}
+
+#loginPage .btnQuick:hover,
+#loginPage .btnForgotPassword:hover,
+#loginPage .btnSelectServer:hover,
+.addServerForm .btnCancel:hover,
+.addServerForm .button-cancel:hover {
+  color: var(--nc-text) !important;
+}
+
+#loginPage .loginDisclaimer {
+  color: var(--nc-muted);
+  text-align: center;
+}
+
+/* User picker avatars are round */
+#loginPage .cardScalable,
+#loginPage .cardImageContainer {
+  border-radius: 50% !important;
+}
+
+/* Server tiles */
+#selectServerPage .card {
+  background: transparent !important;
+}
+
+#selectServerPage .cardBox {
+  background-color: var(--nc-surface-2) !important;
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius) !important;
+}
+
+#selectServerPage .cardImageContainer {
+  background: transparent !important;
+}
+
+#selectServerPage .cardImageIcon {
+  color: var(--nc-accent) !important;
 }
 
 
@@ -118,61 +308,78 @@ a {
    ========================================================================== */
 .skinHeader,
 .skinHeader-withBackground {
-  background-color: var(--nc-header);
+  background-color: var(--nc-header) !important;
   border-bottom: 1px solid var(--nc-border-soft);
-  box-shadow: none;
+  box-shadow: none !important;
   color: var(--nc-text);
 }
 
 .pageTitle {
-  font-weight: 700;
+  font-weight: 700 !important;
   letter-spacing: -0.01em;
+  color: var(--nc-text) !important;
 }
 
-.headerButton {
-  color: var(--nc-text-2);
-  border-radius: var(--nc-radius-btn);
+.skinHeader .headerButton {
+  color: var(--nc-text-2) !important;
+  border-radius: var(--nc-radius-btn) !important;
+  transition: background-color var(--nc-ease), color var(--nc-ease);
 }
 
-.headerButton:hover {
-  color: var(--nc-text);
-  background-color: var(--nc-surface-2);
+/* The avatar's picture is a background image — never repaint its background */
+.skinHeader .headerButton:not(.headerUserButtonRound):hover {
+  color: var(--nc-text) !important;
+  background-color: var(--nc-surface-2) !important;
 }
 
-/* Avatar with accent ring, as in the mockup */
-.headerUserButtonRound { /* UNVERIFIED */
-  border: 2px solid var(--nc-accent);
-  border-radius: 50%;
+/* Avatar with an accent ring, as in the mockup */
+.skinHeader .headerUserButtonRound {
+  border-radius: 50% !important;
+  box-shadow: 0 0 0 2px var(--nc-accent);
+}
+
+/* Back button → dark pill, like "‹ Home" in the detail mockup */
+.skinHeader .headerBackButton {
+  background-color: var(--nc-surface-2) !important;
+  border-radius: var(--nc-radius-btn) !important;
 }
 
 /* Top tabs → rounded pills */
+.headerTabs,
+.headerTabs .tabs-viewmenubar,
+.headerTabs .emby-tabs-slider {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .headerTabs .emby-tab-button {
   font-family: var(--nc-font-body);
   font-weight: 500;
-  color: var(--nc-text-2);
-  border-radius: var(--nc-radius-sm);
-  padding: 0.55em 1.1em;
+  color: var(--nc-text-2) !important;
+  border-radius: var(--nc-radius-sm) !important;
+  padding: 0.55em 1.1em !important;
   margin: 0 0.15em;
-  border-bottom: 0;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color var(--nc-ease), color var(--nc-ease);
 }
 
 .headerTabs .emby-tab-button:hover {
-  color: var(--nc-text);
-  background-color: var(--nc-surface-2);
+  color: var(--nc-text) !important;
+  background-color: var(--nc-surface-2) !important;
 }
 
-.headerTabs .emby-tab-button.emby-tab-button-active,
-.headerTabs .emby-tab-button-active {
-  background-color: var(--nc-accent);
-  color: var(--nc-on-accent);
+.headerTabs .emby-tab-button-active,
+.headerTabs .emby-tab-button-active:hover {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
   font-weight: 600;
 }
 
-/* Hide Jellyfin's underline indicator under the active tab — the pill replaces it */
-.emby-tabs-slider .emby-tab-button::after, /* UNVERIFIED */
-.emby-tab-button-ripple-effect { /* UNVERIFIED */
-  display: none;
+/* Focus ring drawn inside: the tab strip is a scroller and clips outlines */
+.headerTabs .emby-tab-button:focus-visible,
+.headerTabs .emby-tab-button.show-focus:focus {
+  outline: none;
+  transform: none !important;
+  box-shadow: inset 0 0 0 2px var(--nc-accent) !important;
 }
 
 
@@ -180,121 +387,291 @@ a {
    Drawer
    ========================================================================== */
 .mainDrawer {
-  background-color: var(--nc-header);
+  background-color: var(--nc-header) !important;
   border-right: 1px solid var(--nc-border-soft);
+  box-shadow: none !important;
   color: var(--nc-text-2);
 }
 
-.mainDrawer .sidebarHeader { /* UNVERIFIED */
-  color: var(--nc-muted);
+/* User section sits at the bottom of the drawer */
+.mainDrawer-scrollContainer {
+  display: flex !important;
+  flex-direction: column;
+}
+
+.mainDrawer-scrollContainer > * {
+  flex-shrink: 0;
+}
+
+.mainDrawer .userMenuOptions {
+  margin-top: auto;
+  border-top: 1px solid var(--nc-border-soft);
+}
+
+/* Section labels (Media, Administration, User…) */
+.mainDrawer .sidebarHeader {
+  color: var(--nc-muted) !important;
   font-family: var(--nc-font-body);
-  font-weight: 600;
+  font-size: 0.72em !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding-left: 20px !important;
 }
 
-.navMenuOption {
-  color: var(--nc-text-2);
+.mainDrawer .navMenuOption {
+  color: var(--nc-text-2) !important;
   border-radius: var(--nc-radius-sm);
   margin: 2px 8px;
   min-height: var(--nc-touch);
   box-sizing: border-box;
+  transition: background-color var(--nc-ease), color var(--nc-ease);
 }
 
-.navMenuOption:hover {
-  background-color: var(--nc-surface-2);
-  color: var(--nc-text);
+.mainDrawer .navMenuOption:hover {
+  background-color: var(--nc-surface-2) !important;
+  color: var(--nc-text) !important;
 }
 
-.navMenuOption-selected,
-.navMenuOption-selected:hover {
-  background-color: var(--nc-accent);
+.mainDrawer .navMenuOption-selected,
+.mainDrawer .navMenuOption-selected:hover {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+  font-weight: 600 !important;
+}
+
+.mainDrawer .navMenuOption-selected .navMenuOptionIcon {
   color: var(--nc-on-accent);
-  font-weight: 600;
 }
 
-.navMenuOption-selected .navMenuOptionIcon {
-  color: var(--nc-on-accent);
+/* Sign out / Exit warn on hover */
+.mainDrawer .btnLogout:hover,
+.mainDrawer .exitApp:hover {
+  color: var(--nc-danger) !important;
 }
 
 
 /* ==========================================================================
    Cards
    ========================================================================== */
+/* The rounded shape lives on .cardScalable; everything inside is clipped by it */
+.cardScalable {
+  position: relative;
+  border-radius: var(--nc-radius) !important;
+  overflow: hidden;
+  background-color: var(--nc-surface);
+  box-shadow: inset 0 0 0 1px var(--nc-hairline);
+  transform: translateZ(0);            /* keeps the hover zoom inside the corners */
+}
+
 .cardBox,
-.cardScalable,
-.cardImageContainer,
 .cardOverlayContainer {
   border-radius: var(--nc-radius);
 }
 
-.cardScalable {
-  overflow: hidden;
+.cardImageContainer,
+.cardContent {
+  border-radius: 0 !important;
 }
 
+/* Hover: the picture zooms inside its frame, the card itself never grows,
+   so scrolling rows never cut it off */
 .cardImageContainer {
-  background-color: var(--nc-surface);
-  box-shadow: inset 0 0 0 1px var(--nc-hairline);
+  transition: transform 0.35s ease;
 }
 
-/* Placeholder backgrounds when an item has no artwork */
+.card:hover .cardImageContainer,
+.card:focus-visible .cardImageContainer {
+  transform: scale(1.05);
+}
+
+/* Accent ring on hover / focus. Drawn inside the card: Jellyfin's rows are
+   scrollers that clip anything drawn outside it. */
+.cardScalable::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--nc-accent);
+  opacity: 0;
+  transition: opacity var(--nc-ease);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.card:hover .cardScalable::after,
+.card:focus .cardScalable::after,
+.card:focus-within .cardScalable::after {
+  opacity: 1;
+}
+
+/* Remove Jellyfin's own focus border / lift so only our ring shows */
+.card:focus .cardBox,
+.card.show-focus:focus .cardBox { /* UNVERIFIED (.card.show-focus) */
+  transform: none !important;
+  border-color: transparent !important;
+}
+
+/* Items without artwork: surface tile + accent icon */
 .defaultCardBackground,
 .defaultCardBackground1,
 .defaultCardBackground2,
 .defaultCardBackground3,
 .defaultCardBackground4,
 .defaultCardBackground5 {
-  background-color: var(--nc-surface);
+  background: var(--nc-surface) !important;
   color: var(--nc-muted);
 }
 
-/* Hairline + accent outline on hover / keyboard focus */
-.cardBox {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  transition: outline-color 0.15s ease;
+.cardImageIcon {
+  color: var(--nc-accent) !important;
 }
 
-.cardScalable {
-  border: 1px solid var(--nc-hairline);
+/* Hover overlay: soft fade + accent play button */
+.cardOverlayContainer {
+  background: linear-gradient(to top, var(--nc-backdrop-overlay), transparent 60%) !important;
 }
 
-.card:hover .cardScalable,
-.card:focus-visible .cardScalable,
-.card:focus-within .cardScalable {
-  outline: 2px solid var(--nc-accent);
-  outline-offset: 2px;
+.cardOverlayFab-primary {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+  border-radius: 50% !important;
 }
 
-/* Drop Jellyfin's own focus "lift" border so only our outline shows */
-.card:focus .cardBox.visualCardBox,
-.card:focus .cardBox:not(.visualCardBox) .cardScalable {
-  border-color: transparent;
+.cardOverlayButton:not(.cardOverlayFab-primary):hover {
+  background-color: var(--nc-surface-2) !important;
+  color: var(--nc-text) !important;
 }
 
-/* Card text: title in Space Grotesk, meta in muted Inter */
+/* Text under cards: title in Space Grotesk, meta in muted Inter */
+.cardFooter {
+  padding-top: 0.5em;
+}
+
 .cardText {
-  color: var(--nc-text);
+  color: var(--nc-muted);
 }
 
 .cardText-first {
+  color: var(--nc-text) !important;
   font-family: var(--nc-font-display);
   font-weight: 600;
 }
 
 .cardText-secondary {
-  color: var(--nc-muted);
+  color: var(--nc-muted) !important;
   font-family: var(--nc-font-body);
 }
 
 .visualCardBox {
-  background-color: var(--nc-surface);
+  background-color: var(--nc-surface) !important;
   border: 1px solid var(--nc-border);
 }
 
-/* Horizontal scroller arrows */
-.emby-scrollbuttons-button { /* UNVERIFIED */
-  background-color: var(--nc-surface-2);
-  color: var(--nc-text);
-  border-radius: 50%;
+/* Home rows: titles left-aligned like a streaming app */
+.homeSectionsContainer .card:not([data-type="CollectionFolder"]):not([data-type="UserView"]) .cardText {
+  text-align: left !important;
+}
+
+/* Row scroll arrows */
+.emby-scrollbuttons-button {
+  background-color: var(--nc-surface-2) !important;
+  border: 1px solid var(--nc-border) !important;
+  color: var(--nc-text) !important;
+  border-radius: 50% !important;
+}
+
+.emby-scrollbuttons-button:hover:not(:disabled) {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+}
+
+
+/* ==========================================================================
+   Library
+   Movies, Shows, Collections… Toolbar becomes chips like the tablet mockup.
+   Jellyfin keeps a text AND an icon version of most toolbar buttons and
+   hides one by screen width, so nothing here changes "display".
+   ========================================================================== */
+.libraryPage .itemsViewSettingsContainer,
+.libraryPage .pageTabContent > .flex.focuscontainer-x {
+  align-items: center;
+  padding: 8px 0;
+}
+
+/* Spacing via margins: the desktop app's engine ignores flex "gap" */
+.libraryPage .itemsViewSettingsContainer > *,
+.libraryPage .pageTabContent > .flex.focuscontainer-x > * {
+  margin: 4px !important;
+}
+
+.libraryPage .itemsViewSettingsContainer .emby-button,
+.libraryPage .itemsViewSettingsContainer .paper-icon-button-light,
+.libraryPage .pageTabContent > .flex.focuscontainer-x .paper-icon-button-light {
+  min-height: var(--nc-touch);
+  padding: 0.5em 1.1em !important;
+  border: 1px solid var(--nc-chip-border) !important;
+  border-radius: var(--nc-radius-pill) !important;
+  background-color: transparent !important;
+  color: var(--nc-text-2) !important;
+  font-weight: 500;
+  transition: background-color var(--nc-ease), color var(--nc-ease), border-color var(--nc-ease);
+}
+
+.libraryPage .itemsViewSettingsContainer .paper-icon-button-light,
+.libraryPage .pageTabContent > .flex.focuscontainer-x .paper-icon-button-light {
+  min-width: var(--nc-touch);
+  padding: 0.5em !important;           /* icon-only buttons are round */
+}
+
+.libraryPage .itemsViewSettingsContainer .emby-button:hover,
+.libraryPage .itemsViewSettingsContainer .paper-icon-button-light:hover,
+.libraryPage .pageTabContent > .flex.focuscontainer-x .paper-icon-button-light:hover {
+  background-color: var(--nc-surface-2) !important;
+  border-color: var(--nc-accent) !important;
+  color: var(--nc-text) !important;
+}
+
+.libraryPage .btnSortIcon {
+  color: var(--nc-accent);
+}
+
+/* "1–21 of 140" */
+.libraryPage .listPaging {
+  color: var(--nc-muted);
+  font-weight: 500;
+}
+
+/* A–Z jump bar: plain letters, accent for the current one (tablet mockup) */
+.alphaPicker-vertical {
+  background: transparent !important;
+}
+
+.alphaPickerButton {
+  min-width: 28px;
+  color: var(--nc-muted) !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+  border-radius: var(--nc-radius-sm) !important;
+}
+
+.alphaPickerButton:hover {
+  color: var(--nc-text) !important;
+  background-color: var(--nc-surface-2) !important;
+}
+
+.alphaPickerButton-selected,
+.alphaPickerButton-selected:hover {
+  color: var(--nc-accent) !important;
+  background: transparent !important;
+}
+
+/* Keep posters clear of the A–Z bar */
+.libraryPage .itemsContainer.vertical-wrap {
+  padding-right: 2.6em !important;
 }
 
 
@@ -302,19 +679,19 @@ a {
    Progress & badges
    ========================================================================== */
 .itemProgressBar {
-  height: var(--nc-progress-h);
-  background-color: var(--nc-progress-track);
+  height: var(--nc-progress-h) !important;
+  background-color: var(--nc-progress-track) !important;
   border-radius: 0;
 }
 
 .itemProgressBarForeground {
-  background-color: var(--nc-accent);
+  background-color: var(--nc-accent) !important;
 }
 
 .playedIndicator,
 .countIndicator {
-  background-color: var(--nc-accent);
-  color: var(--nc-on-accent);
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
   font-family: var(--nc-font-body);
   font-weight: 600;
 }
@@ -331,12 +708,13 @@ a {
 /* Secondary (default raised button) */
 .emby-button.raised,
 .raised {
-  background-color: var(--nc-surface-2);
-  color: var(--nc-text);
+  background-color: var(--nc-surface-2) !important;
+  color: var(--nc-text) !important;
   border: 1px solid var(--nc-border);
-  border-radius: var(--nc-radius-btn);
-  box-shadow: none;
+  border-radius: var(--nc-radius-btn) !important;
+  box-shadow: none !important;
   font-weight: 500;
+  transition: border-color var(--nc-ease), filter var(--nc-ease);
 }
 
 .emby-button.raised:hover,
@@ -344,20 +722,19 @@ a {
   border-color: var(--nc-chip-border);
 }
 
-/* Primary — Play / Resume / Save */
+/* Primary — Play / Resume / Save / Sign in */
 .button-submit,
 .emby-button.button-submit,
 .raised.button-submit {
-  background-color: var(--nc-accent);
-  color: var(--nc-on-accent);
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
   border: 1px solid var(--nc-accent);
-  border-radius: var(--nc-radius-btn);
+  border-radius: var(--nc-radius-btn) !important;
   font-weight: 600;
 }
 
 .button-submit:hover,
 .emby-button.button-submit:hover {
-  background-color: var(--nc-accent);
   filter: brightness(1.08);
 }
 
@@ -389,20 +766,21 @@ a {
 .emby-select,
 .emby-textarea,
 .emby-select-withcolor {
-  background-color: var(--nc-surface-2);
-  color: var(--nc-text);
-  border: 1px solid var(--nc-border);
-  border-radius: var(--nc-radius-btn);
+  background-color: var(--nc-surface-2) !important;
+  color: var(--nc-text) !important;
+  border: 1px solid var(--nc-border) !important;
+  border-radius: var(--nc-radius-btn) !important;
   font-family: var(--nc-font-body);
+  transition: border-color var(--nc-ease), box-shadow var(--nc-ease);
 }
 
 .emby-input:focus,
 .emby-select:focus,
 .emby-textarea:focus,
 .emby-select-withcolor:focus {
-  border-color: var(--nc-accent);
+  border-color: var(--nc-accent) !important;
   outline: none;
-  box-shadow: 0 0 0 2px var(--nc-accent);
+  box-shadow: 0 0 0 1px var(--nc-accent);
 }
 
 .emby-input::placeholder,
@@ -417,7 +795,7 @@ a {
   color: var(--nc-muted);
 }
 
-.inputLabelFocused,
+.inputLabelFocused, /* UNVERIFIED (all three *Focused classes) */
 .selectLabelFocused,
 .textareaLabelFocused {
   color: var(--nc-accent);
@@ -429,13 +807,18 @@ a {
 }
 
 /* Checkboxes */
-.emby-checkbox:checked + span + .checkboxOutline {
-  background-color: var(--nc-accent);
-  border-color: var(--nc-accent);
+.checkboxOutline {
+  border-radius: var(--nc-radius-chip) !important;
+  border-color: var(--nc-chip-border) !important;
 }
 
-.emby-checkbox:checked + span + .checkboxOutline > .checkboxIcon-checked {
-  color: var(--nc-on-accent);
+.emby-checkbox:checked + span + .checkboxOutline {
+  background-color: var(--nc-accent) !important;
+  border-color: var(--nc-accent) !important;
+}
+
+.emby-checkbox:checked + span + .checkboxOutline > .checkboxIcon-checked { /* UNVERIFIED */
+  color: var(--nc-on-accent) !important;
 }
 
 .emby-checkbox:focus-visible + span + .checkboxOutline {
@@ -451,13 +834,189 @@ input[type="range"] {
 
 
 /* ==========================================================================
-   Detail page
+   Search
    ========================================================================== */
-.itemDetailPage .itemName,
-.detailPagePrimaryContainer .itemName { /* UNVERIFIED */
+#searchPage .searchFieldsInner {
+  position: relative;
+  max-width: 44em !important;
+}
+
+#searchPage .searchfields-icon {
+  position: absolute;
+  left: 0.8em;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0 !important;
+  color: var(--nc-muted);
+  pointer-events: none;
+  z-index: 2;
+}
+
+#searchPage .searchfields-txtSearch {
+  height: 3em !important;
+  padding: 0 1.2em 0 2.8em !important;
+  font-size: 1.15em !important;
+  border-radius: var(--nc-radius-pill) !important;
+}
+
+/* Suggestions → chips */
+#searchPage .searchSuggestionsList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+#searchPage .searchSuggestionsList > div {
+  margin: 0 4px 8px;
+}
+
+#searchPage .searchSuggestionsList .button-link {
+  display: inline-block;
+  padding: 0.55em 1.1em;
+  border: 1px solid var(--nc-chip-border);
+  border-radius: var(--nc-radius-pill);
+  color: var(--nc-text-2) !important;
+  text-decoration: none;
+}
+
+#searchPage .searchSuggestionsList .button-link:hover {
+  border-color: var(--nc-accent);
+  color: var(--nc-text) !important;
+}
+
+/* People in results get round photos */
+#searchPage .card[data-type="Person"] .cardScalable {
+  border-radius: 50% !important;
+}
+
+#searchPage .card[data-type="Person"] .cardPadder {
+  padding-bottom: 100% !important;
+}
+
+#searchPage .noItemsMessage {
+  color: var(--nc-muted);
+}
+
+
+/* ==========================================================================
+   Detail page
+   Desktop: backdrop band across the top, poster on the left overlapping it,
+   title + chips + buttons + overview beside the poster (desktop mockup).
+   ========================================================================== */
+/* Let the backdrop show through Jellyfin's grey panels */
+.itemDetailPage .detailRibbon,
+.itemDetailPage .detailPagePrimaryContainer,
+.itemDetailPage .detailPageSecondaryContainer,
+.noBackdropTransparency .detailPagePrimaryContainer,
+.noBackdropTransparency .detailPageSecondaryContainer {
+  background: transparent !important;
+}
+
+/* Hero backdrop */
+.layout-desktop .itemDetailPage .itemBackdrop {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nc-hero-height) !important;
+  background-attachment: scroll !important;
+  background-position: center 20% !important;
+  z-index: 0;
+}
+
+.itemDetailPage .itemBackdrop::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, var(--nc-bg) 0%, var(--nc-progress-track) 45%, transparent 100%),
+    linear-gradient(to right, var(--nc-progress-track) 0%, transparent 60%);
+}
+
+/* No backdrop image: a quiet night-sky band instead */
+.layout-desktop .itemDetailPage .itemBackdrop:not([style*="url"]) {
+  background: linear-gradient(to bottom, var(--nc-surface), var(--nc-bg)) !important;
+}
+
+.layout-desktop .itemDetailPage .detailPageWrapperContainer {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--nc-hero-offset) !important;
+}
+
+/* Title logos are often dark-on-dark; the text title is used instead */
+.itemDetailPage .detailLogo {
+  display: none !important;
+}
+
+/* Poster on the left, info beside it */
+.layout-desktop .itemDetailPage .detailPagePrimaryContainer {
+  min-height: calc(var(--nc-poster-width) * 1.5 + 1.5em);
+}
+
+.layout-desktop .itemDetailPage .detailPagePrimaryContainer > .detailImageContainer {
+  display: block !important;
+  position: absolute;
+  top: 0.4em;
+  left: var(--nc-page-gutter);
+  width: var(--nc-poster-width);
+  z-index: 2;
+}
+
+.layout-desktop .itemDetailPage .detailImageContainer .card {
+  float: none;
+  top: 0 !important;
+  width: 100%;
+  max-width: 100%;
+}
+
+.layout-desktop .itemDetailPage .detailImageContainer .cardScalable {
+  box-shadow: var(--nc-shadow), inset 0 0 0 1px var(--nc-hairline);
+}
+
+.layout-desktop .itemDetailPage .detailRibbon,
+.layout-desktop .itemDetailPage .detailPagePrimaryContent {
+  padding-left: calc(var(--nc-page-gutter) + var(--nc-poster-width) + 2.5vw) !important;
+  padding-right: var(--nc-page-gutter) !important;
+}
+
+/* Info first, buttons underneath. Jellyfin gives the ribbon a fixed height and
+   a negative margin; both go so the buttons never overlap what follows. */
+.layout-desktop .itemDetailPage .detailRibbon {
+  flex-direction: column;
+  align-items: flex-start !important;
+  height: auto !important;
+  margin-top: 0 !important;
+}
+
+.layout-desktop .itemDetailPage .detailPageSecondaryContainer {
+  padding-left: var(--nc-page-gutter) !important;
+  padding-right: var(--nc-page-gutter) !important;
+}
+
+.layout-desktop .itemDetailPage .detailPageContent {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Title & info line */
+.itemDetailPage .itemName {
   font-family: var(--nc-font-display);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--nc-text) !important;
+}
+
+.itemDetailPage .itemName.originalTitle,
+.itemDetailPage .parentName {
+  font-family: var(--nc-font-body);
+  font-weight: 500 !important;
+  color: var(--nc-muted) !important;
 }
 
 .itemMiscInfo,
@@ -465,46 +1024,134 @@ input[type="range"] {
   color: var(--nc-text-2);
 }
 
-.overview,
-.itemOverview { /* UNVERIFIED (.itemOverview) */
-  color: var(--nc-text-2);
-  line-height: 1.55;
-}
-
-/* Rating / quality chips ("4K HDR", "TV-14") */
+/* Rating / quality chips ("TV-14", "4K HDR") */
 .mediaInfoOfficialRating,
 .mediaInfoItem.mediaInfoText { /* UNVERIFIED (.mediaInfoText) */
-  border: 1px solid var(--nc-chip-border);
-  border-radius: var(--nc-radius-chip);
-  padding: 0.1em 0.45em;
-  color: var(--nc-text);
+  border: 1px solid var(--nc-chip-border) !important;
+  border-radius: var(--nc-radius-chip) !important;
+  padding: 0.1em 0.45em !important;
+  color: var(--nc-text) !important;
   font-weight: 600;
   font-size: 0.85em;
 }
 
-/* Detail buttons (play, resume, watched, favourite…) */
-.mainDetailButtons .detailButton { /* UNVERIFIED */
-  background-color: var(--nc-surface-2);
-  border: 1px solid var(--nc-border);
-  border-radius: var(--nc-radius-btn);
-  color: var(--nc-text);
-  min-width: var(--nc-touch);
-  min-height: var(--nc-touch);
+.itemDetailPage .overview {
+  color: var(--nc-text-2);
+  line-height: 1.6;
+  max-width: 52em;
 }
 
-.mainDetailButtons .detailButton.btnPlay,
-.mainDetailButtons .detailButton.btnResume { /* UNVERIFIED */
-  background-color: var(--nc-accent);
-  border-color: var(--nc-accent);
-  color: var(--nc-on-accent);
+.itemDetailPage .tagline {
+  color: var(--nc-muted);
+  font-style: italic;
+}
+
+.itemDetailPage .itemDetailsGroup .label {
+  color: var(--nc-muted);
   font-weight: 600;
 }
 
-/* Episode rows */
+.itemDetailPage .itemDetailsGroup a,
+.itemDetailPage a.button-link {
+  color: var(--nc-text) !important;
+  text-decoration: none;
+}
+
+.itemDetailPage .itemDetailsGroup a:hover,
+.itemDetailPage a.button-link:hover {
+  color: var(--nc-accent) !important;
+}
+
+/* Buttons: accent "▶ Play" + square secondary buttons (mockup) */
+.itemDetailPage .mainDetailButtons {
+  align-items: center;
+  margin-top: 1em;
+}
+
+.itemDetailPage .mainDetailButtons .detailButton {
+  min-width: var(--nc-touch);
+  min-height: var(--nc-touch);
+  width: auto;
+  height: 48px;
+  margin: 0 10px 10px 0 !important;
+  padding: 0 12px !important;
+  background-color: var(--nc-surface-2) !important;
+  border: 1px solid var(--nc-border) !important;
+  border-radius: var(--nc-radius-btn) !important;
+  color: var(--nc-text) !important;
+  transition: border-color var(--nc-ease), filter var(--nc-ease);
+}
+
+.itemDetailPage .mainDetailButtons .detailButton:hover {
+  border-color: var(--nc-chip-border) !important;
+}
+
+.itemDetailPage .mainDetailButtons .btnPlay,
+.itemDetailPage .mainDetailButtons .btnReplay,
+.itemDetailPage .mainDetailButtons .btnResume { /* UNVERIFIED (.btnResume) */
+  padding: 0 22px 0 16px !important;
+  background-color: var(--nc-accent) !important;
+  border-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+  font-weight: 600;
+}
+
+.itemDetailPage .mainDetailButtons .btnPlay:hover,
+.itemDetailPage .mainDetailButtons .btnReplay:hover {
+  filter: brightness(1.08);
+}
+
+.itemDetailPage .mainDetailButtons .btnPlay .detailButton-content {
+  flex-direction: row;
+}
+
+.itemDetailPage .mainDetailButtons .btnPlay .detailButton-content::after {
+  content: var(--nc-play-label);
+  margin-left: 0.35em;
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+/* Watched / favourite light up when on */
+.itemDetailPage .mainDetailButtons .btnPlaystate.playstatebutton-played,
+.itemDetailPage .mainDetailButtons .btnUserRating.ratingbutton-withrating {
+  color: var(--nc-accent) !important;
+  border-color: var(--nc-accent) !important;
+}
+
+/* Version / audio / subtitle pickers */
+.itemDetailPage .trackSelections {
+  max-width: 44em;
+}
+
+.itemDetailPage .detailTrackSelect {
+  border-radius: var(--nc-radius-btn) !important;
+}
+
+/* Rows below (Seasons, Cast, More like this) */
+.itemDetailPage .detailVerticalSection .sectionTitle {
+  font-family: var(--nc-font-display);
+}
+
+/* Seasons in one horizontal row instead of wrapping */
+.itemDetailPage #listChildrenCollapsible .itemsContainer.vertical-wrap {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.6em !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .itemsContainer.vertical-wrap > .card {
+  flex: 0 0 auto;
+  width: 160px !important;
+}
+
+/* List rows everywhere: rounded, surface on hover */
 .listItem {
   border-radius: var(--nc-radius);
   border: 1px solid transparent;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color var(--nc-ease), border-color var(--nc-ease);
 }
 
 .listItem:hover,
@@ -513,20 +1160,199 @@ input[type="range"] {
   border-color: var(--nc-border);
 }
 
-.listItemImage {
-  border-radius: var(--nc-radius-sm);
-  overflow: hidden;
+/* Episode rows (desktop mockup) */
+.itemDetailPage #listChildrenCollapsible .listItem {
+  display: flex;
+  align-items: center;
+  background: transparent !important;
+  margin: 0 0 8px !important;
+  padding: 12px 16px !important;
 }
 
-.listItemBodyText-secondary,
-.secondary.listItemBodyText { /* UNVERIFIED */
+.itemDetailPage #listChildrenCollapsible .listItem:hover,
+.itemDetailPage #listChildrenCollapsible .listItem:focus-visible {
+  background-color: var(--nc-surface) !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .listItemImage {
+  position: relative;
+  flex-shrink: 0;
+  width: 240px !important;
+  height: 135px !important;
+  border-radius: var(--nc-radius-sm) !important;
+  overflow: hidden;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .listItemImageButton {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+  border-radius: 50% !important;
+  opacity: 0;
+  transition: opacity var(--nc-ease);
+}
+
+.itemDetailPage #listChildrenCollapsible .listItem:hover .listItemImageButton,
+.itemDetailPage #listChildrenCollapsible .listItem:focus-within .listItemImageButton {
+  opacity: 1;
+}
+
+.itemDetailPage #listChildrenCollapsible .listItemBody {
+  padding-left: 24px !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .listItemBodyText:first-child {
+  font-family: var(--nc-font-display);
+  font-weight: 600;
+  font-size: 1.15em;
+  color: var(--nc-text);
+}
+
+.itemDetailPage #listChildrenCollapsible .listItemMediaInfo {
+  color: var(--nc-muted) !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .listItem-overview {
+  color: var(--nc-text-2) !important;
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 60em;
+}
+
+.listItemBodyText.secondary, /* UNVERIFIED */
+.secondary.listItemBodyText {
   color: var(--nc-muted);
 }
 
-/* Cast & crew → round portraits, as in the mockup */
-#castContent .cardScalable,
-#castContent .cardImageContainer { /* UNVERIFIED */
-  border-radius: 50%;
+.itemDetailPage #listChildrenCollapsible .listViewUserDataButtons .paper-icon-button-light {
+  color: var(--nc-muted) !important;
+  border-radius: 50% !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .listViewUserDataButtons .paper-icon-button-light:hover {
+  color: var(--nc-text) !important;
+  background-color: var(--nc-surface-2) !important;
+}
+
+.itemDetailPage #listChildrenCollapsible .playstatebutton-played,
+.itemDetailPage #listChildrenCollapsible .ratingbutton-withrating {
+  color: var(--nc-accent) !important;
+}
+
+/* Cast & crew → round portraits with centred names (mockup) */
+.itemDetailPage .personCard .cardScalable {
+  border-radius: 50% !important;
+}
+
+.itemDetailPage .personCard .cardPadder {
+  padding-bottom: 100% !important;     /* square box so the circle is round */
+}
+
+.itemDetailPage .personCard .cardImageContainer {
+  background-position: center 20% !important;   /* keep faces in frame */
+}
+
+.itemDetailPage .personCard .cardText {
+  text-align: center !important;
+}
+
+
+/* ==========================================================================
+   Player
+   ========================================================================== */
+/* Fade under the controls (separate layer so nothing overrides it) */
+.videoOsdBottom {
+  background: none !important;
+}
+
+.videoOsdBottom::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18em;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--nc-backdrop-overlay), transparent);
+}
+
+.videoOsdBottom > * {
+  position: relative;
+  z-index: 1;
+}
+
+.skinHeader.osdHeader {
+  background: linear-gradient(to bottom, var(--nc-backdrop-overlay), transparent) !important;
+  border-bottom: 0;
+}
+
+.osdHeader .pageTitle {
+  font-family: var(--nc-font-display);
+  font-weight: 600 !important;
+}
+
+/* Seek bar: accent fill, grows on hover */
+.videoOsdBottom .mdl-slider-background-flex {
+  height: var(--nc-progress-h) !important;
+  border-radius: var(--nc-radius-pill);
+  background: var(--nc-progress-track) !important;
+  transition: height var(--nc-ease);
+}
+
+.videoOsdBottom .sliderContainer:hover .mdl-slider-background-flex {
+  height: 8px !important;
+}
+
+.videoOsdBottom .mdl-slider-background-upper {
+  background: var(--nc-hairline) !important;
+}
+
+.videoOsdBottom .mdl-slider-background-lower {
+  background: var(--nc-accent) !important;
+}
+
+.videoOsdBottom .mdl-slider::-webkit-slider-thumb {
+  background: var(--nc-accent) !important;
+}
+
+.videoOsdBottom .sliderBubble {
+  background: var(--nc-surface) !important;
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-sm);
+  color: var(--nc-text);
+}
+
+.videoOsdBottom .osdPositionText,
+.videoOsdBottom .osdDurationText {
+  font-variant-numeric: tabular-nums;
+}
+
+.videoOsdBottom .buttons .paper-icon-button-light {
+  color: var(--nc-text) !important;
+  border-radius: 50% !important;
+  transition: background-color var(--nc-ease);
+}
+
+.videoOsdBottom .buttons .paper-icon-button-light:hover {
+  background-color: var(--nc-hairline) !important;
+}
+
+.videoOsdBottom .osdSecondaryMediaInfo,
+.videoOsdBottom .osdTimeText,
+.videoOsdBottom .endsAtText {
+  color: var(--nc-text-2) !important;
+}
+
+/* "Up next" card */
+.upNextContainer {
+  background: var(--nc-surface) !important;
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-lg) !important;
+  box-shadow: var(--nc-shadow);
 }
 
 
@@ -536,36 +1362,369 @@ input[type="range"] {
 .dialog,
 .formDialog,
 .actionSheet {
-  background-color: var(--nc-surface);
+  background: var(--nc-surface) !important;
   color: var(--nc-text);
-  border: 1px solid var(--nc-border);
-  border-radius: var(--nc-radius-lg);
+  border: 1px solid var(--nc-border) !important;
+  border-radius: var(--nc-radius-lg) !important;
+  box-shadow: var(--nc-shadow) !important;
 }
 
-/* Full-screen dialogs (e.g. on phones) shouldn't get rounded corners */
-.dialog-fullscreen { /* UNVERIFIED */
-  border-radius: 0;
-  border: 0;
+/* Full-screen dialogs (phones) have no corners */
+.dialog-fullscreen,
+.actionsheet-fullscreen {
+  border-radius: 0 !important;
+  border: 0 !important;
+}
+
+.formDialog:not(.dialog-fullscreen),
+.actionSheet:not(.actionsheet-fullscreen) {
+  overflow: hidden;
 }
 
 .formDialogHeader,
 .formDialogFooter {
-  background-color: var(--nc-surface);
-  border-color: var(--nc-border);
+  background: transparent !important;
+  border-color: var(--nc-border) !important;
+}
+
+.formDialogHeader {
+  border-bottom: 1px solid var(--nc-border);
+}
+
+.formDialogFooter {
+  border-top: 1px solid var(--nc-border);
+}
+
+.formDialogHeaderTitle {
+  font-family: var(--nc-font-display);
+  font-weight: 600 !important;
+  color: var(--nc-text) !important;
+}
+
+/* Section labels inside windows (Genres, Features…) */
+.formDialog .checkboxListLabel {
+  color: var(--nc-muted) !important;
+  font-size: 0.78em !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Filter options → toggle chips (matches the library mockup) */
+.formDialog .checkboxList-verticalwrap {
+  display: flex !important;
+  flex-wrap: wrap;
+}
+
+.formDialog .checkboxList-verticalwrap .emby-checkbox-label {
+  width: auto !important;
+  min-height: 0 !important;
+  margin: 0 8px 8px 0 !important;
+  padding-left: 0 !important;
+}
+
+.formDialog .checkboxList-verticalwrap .checkboxOutline {
+  display: none !important;
+}
+
+.formDialog .checkboxList-verticalwrap .checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--nc-touch);
+  box-sizing: border-box;
+  padding: 0 1.1em;
+  border: 1px solid var(--nc-chip-border);
+  border-radius: var(--nc-radius-pill);
+  color: var(--nc-text-2);
+  cursor: pointer;
+  transition: background-color var(--nc-ease), color var(--nc-ease), border-color var(--nc-ease);
+}
+
+.formDialog .checkboxList-verticalwrap .emby-checkbox-label:hover .checkboxLabel {
+  border-color: var(--nc-accent);
+  color: var(--nc-text);
+}
+
+.formDialog .checkboxList-verticalwrap .emby-checkbox:checked + .checkboxLabel {
+  background-color: var(--nc-accent);
+  border-color: var(--nc-accent);
+  color: var(--nc-on-accent);
+  font-weight: 600;
+}
+
+.formDialog .checkboxList-verticalwrap .emby-checkbox:focus-visible + .checkboxLabel {
+  outline: 2px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+/* Action sheets ("…" menus, sort, audio/subtitle pickers) */
+.actionSheetContent {
+  padding: 6px !important;
+}
+
+.actionSheetTitle {
+  font-family: var(--nc-font-display);
+  font-weight: 600 !important;
+  color: var(--nc-text);
+}
+
+.actionSheetText {
+  color: var(--nc-muted);
 }
 
 .actionSheetMenuItem {
-  border-radius: var(--nc-radius-sm);
+  border-radius: var(--nc-radius-sm) !important;
   min-height: var(--nc-touch);
+  background: transparent !important;
+  color: var(--nc-text) !important;
 }
 
 .actionSheetMenuItem:hover,
 .actionSheetMenuItem:focus-visible {
-  background-color: var(--nc-surface-2);
+  background-color: var(--nc-surface-2) !important;
 }
 
-.dialogBackdropOpened { /* UNVERIFIED */
-  background-color: var(--nc-backdrop-overlay);
+.actionsheetMenuItemIcon {
+  color: var(--nc-accent);
+}
+
+.actionSheetMenuItem[data-id="delete"]:hover,
+.actionSheetMenuItem[data-id="delete"]:focus-visible {
+  color: var(--nc-danger) !important;
+}
+
+.actionsheetDivider {
+  background: var(--nc-border) !important;
+}
+
+.dialogBackdropOpened {
+  background-color: var(--nc-bg) !important;
+  opacity: 0.7 !important;
+}
+
+
+/* ==========================================================================
+   Settings & dashboard
+   ========================================================================== */
+/* User settings menu (avatar → Settings): grouped cards */
+#myPreferencesMenuPage .readOnlyContent {
+  max-width: 680px !important;
+  margin: 0 auto;
+}
+
+#myPreferencesMenuPage .verticalSection {
+  background-color: var(--nc-surface);
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius-lg);
+  padding: 8px !important;
+  margin-bottom: 20px !important;
+}
+
+#myPreferencesMenuPage .sectionTitle {
+  font-family: var(--nc-font-body);
+  font-size: 0.75em !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--nc-muted) !important;
+  margin: 12px 0 6px 12px !important;
+}
+
+#myPreferencesMenuPage .listItem-border {
+  display: block;
+  border: 0 !important;
+  border-radius: var(--nc-radius-sm) !important;
+  color: var(--nc-text-2) !important;
+  text-decoration: none;
+}
+
+#myPreferencesMenuPage .listItem-border:hover,
+#myPreferencesMenuPage .listItem-border:focus-visible {
+  background-color: var(--nc-surface-2) !important;
+  color: var(--nc-text) !important;
+}
+
+#myPreferencesMenuPage .listItem {
+  margin: 0 !important;
+  border: 0;
+}
+
+#myPreferencesMenuPage .listItemIcon {
+  color: var(--nc-accent) !important;
+  background: transparent !important;
+}
+
+#myPreferencesMenuPage .btnLogout:hover,
+#myPreferencesMenuPage .exitApp:hover {
+  color: var(--nc-danger) !important;
+}
+
+/* Admin dashboard (MUI; the body gets .dashboardDocument) */
+.dashboardDocument,
+.dashboardDocument .skinBody {
+  background-color: var(--nc-bg) !important;
+}
+
+.dashboardDocument .MuiDrawer-paper {
+  background: var(--nc-header) !important;
+  border-right: 1px solid var(--nc-border-soft) !important;
+}
+
+.dashboardDocument .MuiAppBar-root {
+  background: var(--nc-header) !important;
+  border-bottom: 1px solid var(--nc-border-soft);
+  box-shadow: none !important;
+}
+
+.dashboardDocument .MuiDrawer-paper .MuiListSubheader-root {
+  background: transparent !important;
+  color: var(--nc-muted) !important;
+}
+
+.dashboardDocument .MuiDrawer-paper .MuiListItemButton-root {
+  border-radius: var(--nc-radius-sm) !important;
+  margin: 1px 8px !important;
+  color: var(--nc-text-2) !important;
+}
+
+.dashboardDocument .MuiDrawer-paper .MuiListItemButton-root:hover {
+  background-color: var(--nc-surface-2) !important;
+}
+
+.dashboardDocument .MuiDrawer-paper .MuiListItemButton-root.Mui-selected {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+}
+
+.dashboardDocument .MuiDrawer-paper .Mui-selected .MuiListItemIcon-root {
+  color: var(--nc-on-accent) !important;
+}
+
+.dashboardDocument .MuiPaper-root:not(.MuiDrawer-paper):not(.MuiAppBar-root) {
+  background: var(--nc-surface) !important;
+  border: 1px solid var(--nc-border);
+  border-radius: var(--nc-radius) !important;
+  box-shadow: none !important;
+}
+
+.dashboardDocument .MuiButton-root {
+  border-radius: var(--nc-radius-btn) !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.dashboardDocument .MuiButton-containedPrimary {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+}
+
+.dashboardDocument .MuiButton-outlinedPrimary,
+.dashboardDocument .MuiButton-textPrimary,
+.dashboardDocument .MuiTab-root.Mui-selected,
+.dashboardDocument .MuiInputLabel-root.Mui-focused,
+.dashboardDocument .MuiCheckbox-root.Mui-checked,
+.dashboardDocument .MuiRadio-root.Mui-checked {
+  color: var(--nc-accent) !important;
+}
+
+.dashboardDocument .MuiTabs-indicator {
+  background-color: var(--nc-accent) !important;
+}
+
+.dashboardDocument .MuiOutlinedInput-root {
+  background-color: var(--nc-surface-2);
+  border-radius: var(--nc-radius-btn) !important;
+}
+
+.dashboardDocument .MuiOutlinedInput-notchedOutline {
+  border-color: var(--nc-border) !important;
+}
+
+.dashboardDocument .Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--nc-accent) !important;
+}
+
+.dashboardDocument .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+  background-color: var(--nc-accent) !important;
+  opacity: 1 !important;
+}
+
+.dashboardDocument .MuiTableCell-root {
+  border-bottom-color: var(--nc-border) !important;
+}
+
+
+/* ==========================================================================
+   Plugins (only apply when the plugin is installed)
+   ========================================================================== */
+/* Media Bar — gives you the featured banner from the home mockup.
+   Its script sometimes measures a hidden page and slides the home rows up
+   over the banner; on desktop that offset is always 0, so pin it. */
+html {
+  --slideshow-page-offset: 0px !important;
+  --slideshow-font: var(--nc-font-body) !important;
+}
+
+#slides-container::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30vh;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(to top, var(--nc-bg), transparent);
+}
+
+#slides-container .age-rating {
+  background: transparent !important;
+  border: 1px solid var(--nc-chip-border) !important;
+  border-radius: var(--nc-radius-chip) !important;
+  color: var(--nc-text) !important;
+}
+
+#slides-container .play-button {
+  background-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
+  border-radius: var(--nc-radius-btn) !important;
+  font-family: var(--nc-font-body) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+#slides-container .detail-button,
+#slides-container .favorite-button {
+  background-color: var(--nc-surface-2) !important;
+  border: 1px solid var(--nc-border) !important;
+  border-radius: var(--nc-radius-btn) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#slides-container .dot.active {
+  background-color: var(--nc-accent) !important;
+}
+
+/* Intro Skipper — Skip Intro / Skip Credits */
+.skip-button,
+.skipIntro button,
+.skipIntro .emby-button {
+  background-color: var(--nc-surface) !important;
+  color: var(--nc-text) !important;
+  border: 1px solid var(--nc-chip-border) !important;
+  border-radius: var(--nc-radius-btn) !important;
+  font-family: var(--nc-font-body) !important;
+  font-weight: 600 !important;
+}
+
+.skip-button:hover,
+.skip-button:focus-visible,
+.skipIntro button:hover {
+  background-color: var(--nc-accent) !important;
+  border-color: var(--nc-accent) !important;
+  color: var(--nc-on-accent) !important;
 }
 
 
@@ -589,6 +1748,44 @@ input[type="range"] {
 ::-webkit-scrollbar-thumb {
   background-color: var(--nc-scroll-thumb);
   border-radius: 8px;
+}
+
+
+/* ==========================================================================
+   Motion — respect "reduce motion"
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .card:hover .cardImageContainer,
+  .card:focus-visible .cardImageContainer {
+    transform: none;
+  }
+}
+
+
+/* ==========================================================================
+   TV (LG webOS, Samsung Tizen) — Jellyfin adds .layout-tv
+   ========================================================================== */
+.layout-tv .card:focus .cardScalable::after {
+  box-shadow: inset 0 0 0 4px var(--nc-accent);
+}
+
+.layout-tv .emby-button:focus,
+.layout-tv .paper-icon-button-light:focus,
+.layout-tv .navMenuOption:focus {
+  outline: 3px solid var(--nc-accent);
+  outline-offset: 2px;
+}
+
+/* No zoom on weak TV chips */
+.layout-tv .cardImageContainer {
+  transition: none;
 }
 
 
@@ -622,16 +1819,21 @@ input[type="range"] {
     width: 300px;
   }
 
-  /* Library A–Z jump bar (Jellyfin has one natively) */
-  .alphaPickerButton { /* UNVERIFIED */
-    color: var(--nc-muted);
-    font-weight: 600;
+  .alphaPickerButton {
     min-width: var(--nc-touch);
+    min-height: 32px;
   }
 
-  .alphaPickerButton-selected { /* UNVERIFIED */
-    color: var(--nc-accent);
-    background: transparent;
+  /* Detail page: smaller hero on tablets */
+  :root {
+    --nc-hero-height: 48vh;
+    --nc-hero-offset: 26vh;
+    --nc-poster-width: 180px;
+  }
+
+  .itemDetailPage #listChildrenCollapsible .listItemImage {
+    width: 180px !important;
+    height: 101px !important;
   }
 }
 
@@ -646,7 +1848,7 @@ input[type="range"] {
   }
 
   .headerTabs .emby-tab-button {
-    padding: 0.5em 0.9em;
+    padding: 0.5em 0.9em !important;
     min-height: var(--nc-touch);
   }
 
@@ -657,7 +1859,7 @@ input[type="range"] {
 
   .sectionTitle,
   .sectionTitle-cards {
-    font-size: 20px;
+    font-size: 20px !important;
   }
 
   /* Row card sizes from the phone mockup */
@@ -669,37 +1871,61 @@ input[type="range"] {
     width: 236px;
   }
 
+  /* Login card fits the screen */
+  #loginPage > div,
+  #selectServerPage > div,
+  .standalonePage:not(.wizardPage) > div {
+    margin: 16px auto !important;
+    padding: 32px 20px 24px !important;
+  }
+
   /* Detail page: poster beside the title */
   .layout-mobile .detailPagePrimaryContainer { /* UNVERIFIED */
     display: flex;
     align-items: flex-end;
-    gap: 16px;
   }
 
-  /* Detail page: full-width primary button */
-  .mainDetailButtons { /* UNVERIFIED */
+  .layout-mobile .detailPagePrimaryContainer > .detailImageContainer { /* UNVERIFIED */
+    margin-right: 16px;
+  }
+
+  /* Detail page: full-width primary button, others share the next row */
+  .itemDetailPage .mainDetailButtons {
     flex-wrap: wrap;
-    gap: 8px;
   }
 
-  .mainDetailButtons .detailButton.btnPlay,
-  .mainDetailButtons .detailButton.btnResume { /* UNVERIFIED */
+  .itemDetailPage .mainDetailButtons .btnPlay,
+  .itemDetailPage .mainDetailButtons .btnReplay,
+  .itemDetailPage .mainDetailButtons .btnResume { /* UNVERIFIED (.btnResume) */
     flex: 1 1 100%;
+    justify-content: center;
     min-height: 52px;
   }
 
   /* Episode rows: small thumbnail + title + status */
-  .listItem-largeImage .listItemImage { /* UNVERIFIED */
-    width: 112px;
-    height: 63px;
-    flex-shrink: 0;
+  .itemDetailPage #listChildrenCollapsible .listItem {
+    padding: 8px !important;
   }
 
-  .listItem-largeImage .listItem-overview { /* UNVERIFIED */
-    display: none;
+  .itemDetailPage #listChildrenCollapsible .listItemImage {
+    width: 112px !important;
+    height: 63px !important;
+  }
+
+  .itemDetailPage #listChildrenCollapsible .listItemBody {
+    padding-left: 14px !important;
+  }
+
+  .itemDetailPage #listChildrenCollapsible .listItem-overview {
+    display: none !important;
   }
 
   .listItem {
     min-height: var(--nc-touch);
+  }
+
+  /* A–Z bar: keep letters tappable */
+  .alphaPickerButton {
+    min-height: 28px;
   }
 }
