@@ -57,6 +57,7 @@ Other useful knobs:
 | `--nc-hero-height`  | `62vh`                           | Height of the backdrop band on detail pages   |
 | `--nc-hero-offset`  | `34vh`                           | Where the title block starts on detail pages  |
 | `--nc-progress-h`   | `5px`                            | Thickness of progress bars                    |
+| `--nc-mediabar-gap` | `48px`                           | Space between the Media Bar banner and the first home row |
 
 > For the login background in the desktop app, use your server's full address,
 > e.g. `url("http://your-server:8096/Branding/Splashscreen")`, and upload an image in

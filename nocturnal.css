@@ -77,6 +77,9 @@
   --nc-page-gutter: 4vw;
   --nc-play-label: "Play";                        /* text on the Play button; "" = icon only */
 
+  /* Plugins */
+  --nc-mediabar-gap: 48px;   /* space between the Media Bar banner and the first home row */
+
   /* Login */
   --nc-login-bg: none;       /* e.g. url("/Branding/Splashscreen") for your splash image */
 }
@@ -530,9 +533,10 @@ a {
   color: var(--nc-accent) !important;
 }
 
-/* Hover overlay: soft fade + accent play button */
+/* Hover overlay: the poster stays fully visible; only a short fade along the
+   bottom edge so the small watched / favourite / ⋯ buttons stay readable */
 .cardOverlayContainer {
-  background: linear-gradient(to top, var(--nc-backdrop-overlay), transparent 60%) !important;
+  background: linear-gradient(to top, var(--nc-progress-track), transparent 35%) !important;
 }
 
 .cardOverlayFab-primary {
@@ -1658,10 +1662,14 @@ input[type="range"] {
    Plugins (only apply when the plugin is installed)
    ========================================================================== */
 /* Media Bar — gives you the featured banner from the home mockup.
-   Its script sometimes measures a hidden page and slides the home rows up
-   over the banner; on desktop that offset is always 0, so pin it. */
+   The plugin places the home rows at
+     margin-top: calc(var(--slideshow-content-top) - var(--slideshow-page-offset))
+   which puts them right against the banner's buttons. That offset only moves
+   the rows (not the banner), so a negative value opens a gap. Its script also
+   writes this variable on <html> and sometimes measures a hidden page, which
+   slides the rows up over the banner; !important keeps our value. */
 html {
-  --slideshow-page-offset: 0px !important;
+  --slideshow-page-offset: calc(-1 * var(--nc-mediabar-gap)) !important;
   --slideshow-font: var(--nc-font-body) !important;
 }
 
